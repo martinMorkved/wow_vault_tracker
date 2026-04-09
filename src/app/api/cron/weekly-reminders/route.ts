@@ -14,7 +14,7 @@ function formatOsloDateKey(date: Date) {
   }).format(date);
 }
 
-function isFridayAtSixteenOslo(date: Date) {
+function isFridayAtReminderHourOslo(date: Date) {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: OSLO_TIME_ZONE,
     weekday: "short",
@@ -25,7 +25,7 @@ function isFridayAtSixteenOslo(date: Date) {
   const weekday = parts.find((part) => part.type === "weekday")?.value;
   const hour = Number(parts.find((part) => part.type === "hour")?.value ?? "0");
 
-  return weekday === "Fri" && hour === 16;
+  return weekday === "Fri" && (hour === 15 || hour === 16);
 }
 
 export async function POST(request: NextRequest) {
@@ -38,11 +38,11 @@ export async function POST(request: NextRequest) {
   }
 
   const now = new Date();
-  if (!isFridayAtSixteenOslo(now)) {
+  if (!isFridayAtReminderHourOslo(now)) {
     return NextResponse.json({
       success: true,
       skipped: true,
-      reason: "Outside Friday 16:00 Oslo window.",
+      reason: "Outside Friday 15:00/16:00 Oslo window.",
     });
   }
 
