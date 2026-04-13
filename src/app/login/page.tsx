@@ -1,7 +1,6 @@
 "use client";
 
 import { signIn, useSession } from "next-auth/react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
@@ -16,8 +15,8 @@ export default function LoginPage() {
   }, [router, status]);
 
   return (
-    <main className="min-h-screen bg-zinc-950 px-4 py-12 text-zinc-100">
-      <div className="mx-auto w-full max-w-xl rounded-2xl border border-zinc-800/70 bg-zinc-900/60 p-8 shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
+    <main className="flex min-h-screen items-center justify-center bg-zinc-950 px-4 py-8 text-zinc-100">
+      <div className="w-full max-w-xl rounded-2xl border border-zinc-800/70 bg-zinc-900/60 p-8 shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
         <h1 className="text-3xl font-bold tracking-tight">WoW Vault Tracker</h1>
         <p className="mt-2 text-sm text-zinc-400">
           Sign in with Discord to view and save your characters.
@@ -31,15 +30,6 @@ export default function LoginPage() {
         >
           {status === "loading" ? "Checking session..." : "Log in with Discord"}
         </button>
-
-        <p className="mt-6 text-center text-xs text-zinc-500">
-          <Link
-            href="/login/dev"
-            className="underline decoration-zinc-600 underline-offset-2 hover:text-zinc-400"
-          >
-            Local / admin login (username & password)
-          </Link>
-        </p>
       </div>
     </main>
   );

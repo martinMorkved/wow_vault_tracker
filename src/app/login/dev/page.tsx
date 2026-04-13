@@ -13,8 +13,8 @@ export default function DevLoginPage() {
   const enabled = isCredentialsLoginConfigured();
 
   return (
-    <main className="min-h-screen bg-zinc-950 px-4 py-12 text-zinc-100">
-      <div className="mx-auto w-full max-w-xl rounded-2xl border border-zinc-800/70 bg-zinc-900/60 p-8 shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
+    <main className="flex min-h-screen items-center justify-center bg-zinc-950 px-4 py-8 text-zinc-100">
+      <div className="w-full max-w-xl rounded-2xl border border-zinc-800/70 bg-zinc-900/60 p-8 shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
         <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
           Development
         </p>
