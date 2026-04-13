@@ -9,6 +9,8 @@ type RaiderRecentRun = {
   completed_at: string;
   score: number;
   num_keystone_upgrades: number;
+  /** Stable per completion when Raider provides it (best dedupe key). */
+  keystone_run_id?: number;
 };
 
 type RaiderProfileResponse = {
@@ -20,6 +22,8 @@ type RaiderProfileResponse = {
   thumbnail_url: string;
   profile_url: string;
   mythic_plus_recent_runs?: RaiderRecentRun[];
+  /** Current raid week per Raider (often aligns better with WoW than date math alone). */
+  mythic_plus_weekly_highest_level_runs?: RaiderRecentRun[];
 };
 
 type RaiderErrorResponse = {
@@ -29,6 +33,7 @@ type RaiderErrorResponse = {
 };
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
+const VAULT_RUNS_MAX = 8;
 
 type ProfileResponsePayload = {
   character: {
@@ -44,7 +49,6 @@ type ProfileResponsePayload = {
   nextResetAtUtc: string;
   regionLabel: string;
   weeklyRunCount: number;
-  weeklyTenPlusCount: number;
   vault: {
     one: boolean;
     four: boolean;
@@ -54,15 +58,14 @@ type ProfileResponsePayload = {
     missingForEight: number;
   };
   recentRuns: RaiderRecentRun[];
-  weeklyRuns: RaiderRecentRun[];
 };
 
 function getWeeklyResetUtc(region: string, now = new Date()): Date {
-  // MVP defaults: EU weekly reset on Wednesday 07:00 UTC.
-  // This can be made fully region-aware and DST-aware later.
+  // Align with WoW weekly reset (Great Vault / M+): EU Wednesday 04:00 UTC,
+  // US Tuesday 15:00 UTC (Blizzard moved EU from 07:00 → 04:00 UTC in Nov 2022).
   const normalizedRegion = region.toLowerCase();
   const resetDay = normalizedRegion === "eu" ? 3 : 2; // Sun=0, Tue=2, Wed=3
-  const resetHourUtc = normalizedRegion === "eu" ? 7 : 15;
+  const resetHourUtc = normalizedRegion === "eu" ? 4 : 15;
 
   const current = new Date(now);
   const day = current.getUTCDay();
@@ -91,19 +94,83 @@ function normalizeRealmSlug(realm: string): string {
   return realm.trim().toLowerCase().replace(/\s+/g, "-");
 }
 
+/** Raider.io returns ISO timestamps; treat missing timezone as UTC. */
+function parseRaiderCompletedAt(iso: string): Date {
+  const trimmed = iso.trim();
+  const hasZone =
+    /[zZ]$/.test(trimmed) || /[+-]\d{2}:?\d{2}$/.test(trimmed);
+  return new Date(hasZone ? trimmed : `${trimmed}Z`);
+}
+
+function dedupeMythicRuns(runs: RaiderRecentRun[]): RaiderRecentRun[] {
+  const m = new Map<string, RaiderRecentRun>();
+  for (const run of runs) {
+    const kid = run.keystone_run_id;
+    const key =
+      typeof kid === "number" && Number.isFinite(kid)
+        ? `id:${kid}`
+        : `c:${run.short_name}|${run.completed_at}|${run.mythic_level}`;
+    if (!m.has(key)) m.set(key, run);
+  }
+  return [...m.values()];
+}
+
+/**
+ * Prefer Raider's `mythic_plus_weekly_highest_level_runs` (current raid week on their side),
+ * merged with `mythic_plus_recent_runs` in our reset window so we don't miss runs only in one list.
+ */
+function mergeRunsForCurrentWeek(
+  data: RaiderProfileResponse,
+  region: string,
+): RaiderRecentRun[] {
+  const resetAt = getWeeklyResetUtc(region);
+  const weekly = data.mythic_plus_weekly_highest_level_runs ?? [];
+  const recent = data.mythic_plus_recent_runs ?? [];
+  const recentInWeek = recent.filter(
+    (run) => parseRaiderCompletedAt(run.completed_at) >= resetAt,
+  );
+
+  if (weekly.length === 0) {
+    return dedupeMythicRuns(recentInWeek);
+  }
+
+  return dedupeMythicRuns([...weekly, ...recentInWeek]);
+}
+
+function keystoneLevel(run: RaiderRecentRun): number {
+  const n = run.mythic_level;
+  if (typeof n === "number" && Number.isFinite(n)) return n;
+  const parsed = Number(n);
+  return Number.isFinite(parsed) ? parsed : NaN;
+}
+
+function isCompletedKeystoneTenOrHigher(run: RaiderRecentRun): boolean {
+  const level = keystoneLevel(run);
+  return Number.isFinite(level) && level >= 10;
+}
+
+/** Merged Raider lists → this lockout only → keystone +10 or higher. */
+function runsKeystoneTenPlusThisWeek(
+  data: RaiderProfileResponse,
+  region: string,
+  resetAt: Date,
+): RaiderRecentRun[] {
+  const merged = mergeRunsForCurrentWeek(data, region);
+  return merged.filter(
+    (run) =>
+      parseRaiderCompletedAt(run.completed_at) >= resetAt &&
+      isCompletedKeystoneTenOrHigher(run),
+  );
+}
+
 function buildProfilePayload(
   data: RaiderProfileResponse,
   region: string,
 ): ProfileResponsePayload {
   const recentRuns = data.mythic_plus_recent_runs ?? [];
   const resetAt = getWeeklyResetUtc(region);
-  const weeklyRuns = recentRuns.filter(
-    (run) => new Date(run.completed_at) >= resetAt,
-  );
-  const weeklyRunCount = weeklyRuns.length;
-  const weeklyTenPlusCount = weeklyRuns.filter(
-    (run) => run.mythic_level >= 10,
-  ).length;
+  const tenPlusThisWeek = runsKeystoneTenPlusThisWeek(data, region, resetAt);
+  const weeklyRunCount = Math.min(VAULT_RUNS_MAX, tenPlusThisWeek.length);
   const nextResetAt = new Date(resetAt);
   nextResetAt.setUTCDate(nextResetAt.getUTCDate() + 7);
 
@@ -121,7 +188,6 @@ function buildProfilePayload(
     nextResetAtUtc: nextResetAt.toISOString(),
     regionLabel: region.toUpperCase(),
     weeklyRunCount,
-    weeklyTenPlusCount,
     vault: {
       one: weeklyRunCount >= 1,
       four: weeklyRunCount >= 4,
@@ -131,7 +197,6 @@ function buildProfilePayload(
       missingForEight: Math.max(8 - weeklyRunCount, 0),
     },
     recentRuns,
-    weeklyRuns,
   };
 }
 
@@ -197,7 +262,10 @@ export async function GET(request: NextRequest) {
   raiderUrl.searchParams.set("region", region);
   raiderUrl.searchParams.set("realm", realm);
   raiderUrl.searchParams.set("name", name);
-  raiderUrl.searchParams.set("fields", "mythic_plus_recent_runs");
+  raiderUrl.searchParams.set(
+    "fields",
+    "mythic_plus_recent_runs,mythic_plus_weekly_highest_level_runs",
+  );
 
   const response = await fetch(raiderUrl, {
     next: { revalidate: 120 },

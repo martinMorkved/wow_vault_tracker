@@ -6,7 +6,7 @@ function capitalizeFirst(value: string) {
 function getNextVaultResetUtc(region: string, now = new Date()) {
   const normalizedRegion = region.toLowerCase();
   const resetDay = normalizedRegion === "eu" ? 3 : 2; // Sun=0, Tue=2, Wed=3
-  const resetHourUtc = normalizedRegion === "eu" ? 7 : 15;
+  const resetHourUtc = normalizedRegion === "eu" ? 4 : 15;
 
   const current = new Date(now);
   const nextReset = new Date(

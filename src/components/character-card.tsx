@@ -1,7 +1,10 @@
+"use client";
 /* eslint-disable @next/next/no-img-element */
+
 import { CharacterInput, CharacterResult } from "@/lib/types";
 import {
   capitalizeFirst,
+  clampVaultRunDisplayCount,
   formatRealmLabel,
   getVaultProgressPercent,
 } from "@/lib/ui-format";
@@ -23,8 +26,9 @@ export function CharacterVaultRow({
   onRefresh,
   onRemove,
 }: CharacterVaultRowProps) {
-  const n = result?.weeklyRunCount ?? 0;
-  const progressWidth = result ? `${getVaultProgressPercent(n)}%` : "0%";
+  const raw = result?.weeklyRunCount ?? 0;
+  const n = clampVaultRunDisplayCount(raw);
+  const progressWidth = result ? `${getVaultProgressPercent(raw)}%` : "0%";
 
   return (
     <div className="border-b border-zinc-800/60 px-4 py-4 last:border-b-0">
@@ -103,17 +107,10 @@ export function CharacterVaultRow({
           {isLoading && !result ? (
             <span className="text-2xl font-semibold text-zinc-500">…</span>
           ) : (
-            <>
-              <p className="text-3xl font-bold leading-none text-zinc-50">
-                {n}
-                <span className="ml-0.5 text-lg font-medium text-zinc-500">/8</span>
-              </p>
-              {result ? (
-                <p className="mt-2 text-xs tabular-nums text-zinc-500">
-                  Key level 10+ this week: {result.weeklyTenPlusCount}
-                </p>
-              ) : null}
-            </>
+            <p className="text-3xl font-bold leading-none text-zinc-50">
+              {n}
+              <span className="ml-0.5 text-lg font-medium text-zinc-500">/8</span>
+            </p>
           )}
         </div>
       </div>

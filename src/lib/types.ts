@@ -19,7 +19,6 @@ export type CharacterResult = {
   nextResetAtUtc: string;
   regionLabel: string;
   weeklyRunCount: number;
-  weeklyTenPlusCount: number;
   vault: {
     one: boolean;
     four: boolean;

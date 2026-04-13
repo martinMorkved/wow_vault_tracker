@@ -330,7 +330,7 @@ export default function Home() {
               <h1 className="text-3xl font-bold tracking-tight">WoW Vault Tracker</h1>
               <p className="mt-1 text-sm text-zinc-400">
                 Add characters, refresh data, and quickly see weekly progress
-                toward 1/4/8 M+ vault slots.
+                toward 1/4/8 completions at +10 or higher this week (Raider.io data).
               </p>
             </div>
             <div className="flex items-center gap-2">

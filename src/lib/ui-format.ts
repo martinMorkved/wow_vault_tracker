@@ -26,9 +26,16 @@ export function formatDurationUntil(value: string) {
   return parts.join(" ");
 }
 
+const VAULT_RUNS_MAX = 8;
+
+/** Display count for N/8 (never above vault cap). */
+export function clampVaultRunDisplayCount(count: number): number {
+  return Math.max(0, Math.min(count, VAULT_RUNS_MAX));
+}
+
 export function getVaultProgressPercent(weeklyRunCount: number) {
-  const clamped = Math.max(0, Math.min(weeklyRunCount, 8));
-  return (clamped / 8) * 100;
+  const clamped = clampVaultRunDisplayCount(weeklyRunCount);
+  return (clamped / VAULT_RUNS_MAX) * 100;
 }
 
 export function formatRealmLabel(realmSlug: string) {
