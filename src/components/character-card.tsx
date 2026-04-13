@@ -109,12 +109,8 @@ export function CharacterVaultRow({
                 <span className="ml-0.5 text-lg font-medium text-zinc-500">/8</span>
               </p>
               {result ? (
-                <p className="mt-1 text-xs text-zinc-500">
-                  10+{" "}
-                  <span className="font-medium text-amber-400/90">
-                    {result.weeklyTenPlusCount}
-                  </span>
-                  <span className="text-zinc-600">/8</span>
+                <p className="mt-2 text-xs tabular-nums text-zinc-500">
+                  Key level 10+ this week: {result.weeklyTenPlusCount}
                 </p>
               ) : null}
             </>
