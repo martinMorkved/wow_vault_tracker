@@ -64,7 +64,7 @@ export default function Home() {
   const regionOptions = useMemo(
     () => [
       { value: "eu", label: "EU" },
-      { value: "us", label: "US" },
+      { value: "us", label: "US · OCE · LA" },
     ],
     [],
   );
