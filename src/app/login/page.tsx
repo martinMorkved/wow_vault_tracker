@@ -1,6 +1,7 @@
 "use client";
 
 import { signIn, useSession } from "next-auth/react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
@@ -30,6 +31,15 @@ export default function LoginPage() {
         >
           {status === "loading" ? "Checking session..." : "Log in with Discord"}
         </button>
+
+        <p className="mt-6 text-center text-xs text-zinc-500">
+          <Link
+            href="/login/dev"
+            className="underline decoration-zinc-600 underline-offset-2 hover:text-zinc-400"
+          >
+            Local / admin login (username & password)
+          </Link>
+        </p>
       </div>
     </main>
   );

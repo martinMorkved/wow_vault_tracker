@@ -1,6 +1,6 @@
 "use client";
 
-import { CharacterCard } from "@/components/character-card";
+import { CharacterVaultRow } from "@/components/character-card";
 import { RealmCombobox } from "@/components/realm-combobox";
 import { SearchableSelect } from "@/components/searchable-select";
 import { REALMS_BY_REGION } from "@/lib/realms";
@@ -437,23 +437,27 @@ export default function Home() {
             </div>
           )}
 
-          {characters.map((char) => {
-            const result = results[char.id];
-            const error = errors[char.id];
-            const isLoading = Boolean(loading[char.id]);
+          {!isLoadingCharacters && hasCharacters ? (
+            <div className="overflow-hidden rounded-2xl border border-zinc-800/70 bg-zinc-900/70 shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
+              {characters.map((char) => {
+                const result = results[char.id];
+                const error = errors[char.id];
+                const isLoading = Boolean(loading[char.id]);
 
-            return (
-              <CharacterCard
-                key={char.id}
-                character={char}
-                result={result}
-                error={error}
-                isLoading={isLoading}
-                onRefresh={() => fetchCharacter(char, true)}
-                onRemove={() => removeCharacter(char.id)}
-              />
-            );
-          })}
+                return (
+                  <CharacterVaultRow
+                    key={char.id}
+                    character={char}
+                    result={result}
+                    error={error}
+                    isLoading={isLoading}
+                    onRefresh={() => fetchCharacter(char, true)}
+                    onRemove={() => removeCharacter(char.id)}
+                  />
+                );
+              })}
+            </div>
+          ) : null}
         </section>
       </div>
     </main>
