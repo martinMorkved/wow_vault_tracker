@@ -20,7 +20,7 @@ export async function getCurrentUser() {
       discordId,
       email,
     },
-    select: { id: true, discordId: true, discordDmActivationSentAt: true },
+    select: { id: true, discordId: true },
   });
 
   return user;

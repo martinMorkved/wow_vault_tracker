@@ -28,10 +28,7 @@ export async function GET() {
     },
   });
 
-  return NextResponse.json({
-    characters,
-    discordDmActivationSentAt: currentUser.discordDmActivationSentAt,
-  });
+  return NextResponse.json({ characters });
 }
 
 export async function POST(request: NextRequest) {

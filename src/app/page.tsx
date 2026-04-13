@@ -29,12 +29,6 @@ export default function Home() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [isLoadingCharacters, setIsLoadingCharacters] = useState(true);
-  const [isActivatingNotifications, setIsActivatingNotifications] = useState(false);
-  const [isCheckingDiscordStatus, setIsCheckingDiscordStatus] = useState(false);
-  const [isSendingReminder, setIsSendingReminder] = useState(false);
-  const [notificationStatus, setNotificationStatus] = useState("");
-  const [reminderStatus, setReminderStatus] = useState("");
-  const [notificationsActive, setNotificationsActive] = useState(false);
   const [formError, setFormError] = useState("");
 
   useEffect(() => {
@@ -44,7 +38,6 @@ export default function Home() {
       setErrors({});
       setLoading({});
       setIsLoadingCharacters(false);
-      setNotificationsActive(false);
       return;
     }
 
@@ -55,13 +48,10 @@ export default function Home() {
         const response = await fetch("/api/characters");
         const json = (await response.json()) as {
           characters?: CharacterInput[];
-          discordDmActivationSentAt?: string | null;
         };
         const list = json.characters ?? [];
         setCharacters(list);
-        setNotificationsActive(Boolean(json.discordDmActivationSentAt));
         await refreshCharacters(list);
-        await refreshDiscordStatus();
       } finally {
         setIsLoadingCharacters(false);
       }
@@ -139,112 +129,6 @@ export default function Home() {
 
   async function refreshAll() {
     await refreshCharacters(characters, true);
-  }
-
-  async function refreshDiscordStatus() {
-    setIsCheckingDiscordStatus(true);
-    try {
-      const response = await fetch("/api/discord/status");
-      const json = (await response.json()) as {
-        active?: boolean;
-        hasMutualGuild?: boolean;
-      };
-
-      if (!response.ok) {
-        throw new Error("Failed to check Discord bot status.");
-      }
-
-      setNotificationsActive(Boolean(json.active));
-    } catch {
-      setNotificationStatus("Could not check Discord bot status right now.");
-    } finally {
-      setIsCheckingDiscordStatus(false);
-    }
-  }
-
-  async function activateNotifications() {
-    setIsActivatingNotifications(true);
-    setNotificationStatus("");
-
-    try {
-      const response = await fetch("/api/discord/test-dm", { method: "POST" });
-      const json = (await response.json()) as {
-        error?: string;
-        details?: string;
-        code?: string;
-        alreadyActive?: boolean;
-      };
-
-      if (!response.ok) {
-        if (json.code === "NO_MUTUAL_GUILD") {
-          const popup = window.open(
-            "/api/discord/invite",
-            "_blank",
-            "noopener,noreferrer",
-          );
-          if (!popup) {
-            throw new Error(
-              "Popup blocked. Allow popups and try Activate notifications again.",
-            );
-          }
-          setNotificationStatus(
-            "Opened Discord invite. Complete invite, then click Activate notifications again.",
-          );
-          return;
-        }
-        if (json.code === "USER_DMS_DISABLED") {
-          throw new Error(
-            "Discord blocked the DM. Enable DMs from server members in Privacy Settings and try again.",
-          );
-        }
-        const details =
-          typeof json.details === "string" && json.details.length > 0
-            ? ` (${json.details})`
-            : "";
-        throw new Error(
-          `${json.error ?? "Failed to activate notifications."}${details}`,
-        );
-      }
-
-      setNotificationStatus(
-        json.alreadyActive
-          ? "Discord notifications are already active."
-          : "Discord notifications are now active.",
-      );
-      setNotificationsActive(true);
-    } catch (error) {
-      setNotificationStatus(
-        error instanceof Error ? error.message : "Failed to activate notifications.",
-      );
-    } finally {
-      setIsActivatingNotifications(false);
-    }
-  }
-
-  async function sendReminderNow() {
-    setIsSendingReminder(true);
-    setReminderStatus("");
-
-    try {
-      const response = await fetch("/api/discord/reminder", { method: "POST" });
-      const json = (await response.json()) as { error?: string; details?: string };
-
-      if (!response.ok) {
-        const details =
-          typeof json.details === "string" && json.details.length > 0
-            ? ` (${json.details})`
-            : "";
-        throw new Error(`${json.error ?? "Failed to send reminder."}${details}`);
-      }
-
-      setReminderStatus("Reminder sent on Discord.");
-    } catch (error) {
-      setReminderStatus(
-        error instanceof Error ? error.message : "Failed to send reminder.",
-      );
-    } finally {
-      setIsSendingReminder(false);
-    }
   }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -380,41 +264,7 @@ export default function Home() {
         </section>
 
         <section className="grid gap-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              {!notificationsActive && (
-                <button
-                  type="button"
-                  onClick={activateNotifications}
-                  disabled={isActivatingNotifications || isCheckingDiscordStatus}
-                  className="rounded-md border border-indigo-300/50 bg-indigo-500/80 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isCheckingDiscordStatus
-                    ? "Checking..."
-                    : isActivatingNotifications
-                    ? "Activating..."
-                    : "Activate notifications"}
-                </button>
-              )}
-              {!notificationsActive && notificationStatus && (
-                <p className="text-xs text-zinc-400">{notificationStatus}</p>
-              )}
-              {notificationsActive && (
-                <>
-                  <button
-                    type="button"
-                    onClick={sendReminderNow}
-                    disabled={isSendingReminder}
-                    className="rounded-md border border-zinc-600/80 bg-zinc-800/70 px-3 py-2 text-sm text-zinc-100 hover:border-zinc-500 hover:bg-zinc-700/80 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {isSendingReminder ? "Sending reminder..." : "Send reminder now"}
-                  </button>
-                  {reminderStatus && (
-                    <p className="text-xs text-zinc-400">{reminderStatus}</p>
-                  )}
-                </>
-              )}
-            </div>
+          <div className="flex flex-wrap items-center justify-end gap-3">
             <button
               type="button"
               onClick={refreshAll}
